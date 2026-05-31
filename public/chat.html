@@ -1245,7 +1245,9 @@ function setSpeaking(user,spk){
    ADMIN / CONTEXT MENU
 =================================================== */
 function showCtx(e,user){
-  e.preventDefault();ctxTarget=user;
+  e.preventDefault();
+  e.stopPropagation();
+  ctxTarget=user;
   const m=document.getElementById('ctxm');
   m.style.top=e.clientY+'px';m.style.right=(window.innerWidth-e.clientX)+'px';m.style.left='auto';
   m.classList.add('open');
