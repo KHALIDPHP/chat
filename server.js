@@ -624,6 +624,42 @@ io.on('connection', (socket) => {
   });
 
   // -----------------------------------------------
+  // UNBAN USER (Admin only)
+  // -----------------------------------------------
+  socket.on('unban_user', async ({ targetUsername }) => {
+    const user = onlineUsers.get(socket.id);
+    if (!user) return;
+
+    const isAdmin = await checkIsAdmin(user.username, user.room);
+    if (!isAdmin) {
+      socket.emit('error_msg', { message: 'ليس لديك صلاحية لرفع الحظر' });
+      return;
+    }
+
+    const cleanTarget = targetUsername.trim();
+    if (db) {
+      try {
+        const [roomRow] = await db.query('SELECT id FROM rooms WHERE name = ?', [user.room]);
+        if (roomRow.length > 0) {
+          await db.query(
+            'DELETE FROM banned_users WHERE room_id = ? AND username = ?',
+            [roomRow[0].id, cleanTarget]
+          );
+        }
+      } catch (e) {}
+    }
+
+    io.to(user.room).emit('new_message', {
+      id: uuidv4(),
+      username: 'النظام',
+      color: '#4caf50',
+      message: `تم رفع الحظر عن ${cleanTarget} بواسطة المشرف ${user.username}`,
+      time: formatTime(),
+      type: 'system'
+    });
+  });
+
+  // -----------------------------------------------
   // MAKE ADMIN
   // -----------------------------------------------
   socket.on('make_admin', async ({ targetUsername }) => {

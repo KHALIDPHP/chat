@@ -719,11 +719,20 @@
         <span class="admin-btn-icon">📢</span>
         <span>إعلان جديد</span>
       </button>
+      <button class="admin-btn primary" onclick="toggleUnbanInput()" style="background: linear-gradient(135deg, #1565c0, #0d47a1); color: #fff; border: none;">
+        <span class="admin-btn-icon">🔓</span>
+        <span>إلغاء حظر</span>
+      </button>
     </div>
     <div class="admin-input-group" id="announcementInputGroup" style="display: none;">
       <span class="admin-input-label">نص الإعلان الجديد:</span>
       <input type="text" class="admin-text-input" id="announcementInput" placeholder="اكتب الإعلان هنا..." onkeydown="handleAnnouncementKey(event)">
       <button class="admin-submit-btn" onclick="adminSubmitAnnouncement()">إرسال الإعلان</button>
+    </div>
+    <div class="admin-input-group" id="unbanInputGroup" style="display: none;">
+      <span class="admin-input-label">اسم المستخدم لإلغاء حظره:</span>
+      <input type="text" class="admin-text-input" id="unbanInput" placeholder="اكتب اسم المستخدم هنا..." onkeydown="handleUnbanKey(event)">
+      <button class="admin-submit-btn" onclick="adminSubmitUnban()" style="background: #388e3c;">إلغاء الحظر</button>
     </div>
   </div>
 </div>
@@ -1465,6 +1474,34 @@ function adminSubmitAnnouncement() {
   socket.emit('broadcast_announcement', { text });
   input.value = '';
   const group = document.getElementById('announcementInputGroup');
+  if (group) group.style.display = 'none';
+  toggleAdminPanel(false);
+}
+
+function toggleUnbanInput() {
+  const group = document.getElementById('unbanInputGroup');
+  if (group) {
+    group.style.display = group.style.display === 'none' ? 'flex' : 'none';
+    if (group.style.display === 'flex') {
+      document.getElementById('unbanInput').focus();
+    }
+  }
+}
+
+function handleUnbanKey(e) {
+  if (e.key === 'Enter') {
+    adminSubmitUnban();
+  }
+}
+
+function adminSubmitUnban() {
+  const input = document.getElementById('unbanInput');
+  if (!input) return;
+  const targetUsername = input.value.trim();
+  if (!targetUsername) return;
+  socket.emit('unban_user', { targetUsername });
+  input.value = '';
+  const group = document.getElementById('unbanInputGroup');
   if (group) group.style.display = 'none';
   toggleAdminPanel(false);
 }
