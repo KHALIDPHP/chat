@@ -537,6 +537,48 @@
       color: #e53935 !important;
       cursor: not-allowed !important;
     }
+
+    /* =========== MENU DROPDOWN =========== */
+    .menu-dropdown {
+      position: absolute;
+      top: 52px;
+      left: 6px;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 500;
+      min-width: 140px;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      animation: fadeInDropdown 0.15s ease-out;
+    }
+    @keyframes fadeInDropdown {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .menu-dropdown-item {
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: bold;
+      color: #333;
+      cursor: pointer;
+      text-align: right;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .menu-dropdown-item:hover {
+      background: #f5f5f5;
+    }
+    .menu-dropdown-item.danger {
+      color: #c62828;
+    }
+    .menu-dropdown-item.danger:hover {
+      background: #ffebee;
+    }
   </style>
 </head>
 <body>
@@ -563,8 +605,16 @@
 
   <button class="hb chat-icon" id="btnChat" title="المحادثة">💬</button>
   <button class="hb menu-icon" id="adminGearBtn" onclick="toggleAdminPanel()" title="لوحة الإدارة" style="display: none; background: #e09610; color: #fff; border: 1px solid rgba(255,255,255,0.4);">⚙️</button>
-  <button class="hb menu-icon" onclick="toggleMenu()">☰</button>
+  <button class="hb menu-icon" id="btnMenu" onclick="toggleMenu(event)">☰</button>
 </header>
+
+<!-- ===== MENU DROPDOWN ===== -->
+<div class="menu-dropdown" id="menuDropdown">
+  <div class="menu-dropdown-item danger" onclick="logout()">
+    <span>🚪</span>
+    <span>تسجيل الخروج</span>
+  </div>
+</div>
 
 <!-- Voice active strip -->
 <div class="vstrip" id="vstrip">
@@ -1379,7 +1429,27 @@ function adminSubmitAnnouncement() {
   toggleAdminPanel(false);
 }
 
-function toggleMenu(){toast('غرفة: '+room)}
+function toggleMenu(e) {
+  if (e) {
+    e.stopPropagation();
+  }
+  const m = document.getElementById('menuDropdown');
+  if (!m) return;
+  m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+}
+
+function logout() {
+  if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+    sessionStorage.removeItem('chatUsername');
+    sessionStorage.removeItem('chatRoom');
+    sessionStorage.removeItem('chatColor');
+    sessionStorage.removeItem('chatPassword');
+    if (inVoice) {
+      leaveVoice();
+    }
+    window.location.href = '/';
+  }
+}
 
 function toggleUsers(show){
   const p = document.getElementById('usersPanel');
