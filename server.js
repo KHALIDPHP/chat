@@ -652,21 +652,15 @@ io.on('connection', (socket) => {
     const speaker = activeSpeakers.get(roomName);
     if (!speaker) {
       // Direct promotion
-      const expiresAt = Date.now() + 180000;
       activeSpeakers.set(roomName, {
         socketId: socket.id,
         username: user.username,
         color: user.color,
-        expiresAt: expiresAt
+        ready: false
       });
 
       socket.emit('mic_assigned');
-      io.to(roomName).emit('speaker_changed', {
-        username: user.username,
-        color: user.color,
-        timeLeft: 180
-      });
-      startSpeakerTimer(roomName);
+      startSpeakerSetupTimeout(roomName);
     } else {
       // Add to queue if not already there and not the speaker
       if (speaker.socketId !== socket.id && !queue.some(q => q.socketId === socket.id)) {
@@ -680,6 +674,26 @@ io.on('connection', (socket) => {
           queue: queue.map(q => ({ username: q.username, color: q.color }))
         });
       }
+    }
+  });
+
+  socket.on('speaker_ready', () => {
+    const user = onlineUsers.get(socket.id);
+    if (!user) return;
+
+    const roomName = user.room;
+    const speaker = activeSpeakers.get(roomName);
+    if (speaker && speaker.socketId === socket.id && !speaker.ready) {
+      clearTimeout(speaker.setupTimer);
+      speaker.ready = true;
+      speaker.expiresAt = Date.now() + 180000;
+
+      io.to(roomName).emit('speaker_changed', {
+        username: speaker.username,
+        color: speaker.color,
+        timeLeft: 180
+      });
+      startSpeakerTimer(roomName);
     }
   });
 
@@ -788,11 +802,26 @@ function startSpeakerTimer(roomName) {
   }, 180000);
 }
 
+function startSpeakerSetupTimeout(roomName) {
+  const speaker = activeSpeakers.get(roomName);
+  if (!speaker) return;
+
+  clearTimeout(speaker.setupTimer);
+  speaker.setupTimer = setTimeout(() => {
+    const current = activeSpeakers.get(roomName);
+    if (current && current.socketId === speaker.socketId && !current.ready) {
+      console.log(`⚠️ انتهت مهلة إعداد المايك لـ ${speaker.username} في غرفة ${roomName}`);
+      demoteSpeaker(roomName);
+    }
+  }, 12000);
+}
+
 function demoteSpeaker(roomName) {
   const speaker = activeSpeakers.get(roomName);
   if (!speaker) return;
 
   clearTimeout(speaker.timer);
+  clearTimeout(speaker.setupTimer);
   activeSpeakers.delete(roomName);
 
   // Notify the demoted speaker
@@ -802,24 +831,19 @@ function demoteSpeaker(roomName) {
   const queue = micQueues.get(roomName) || [];
   if (queue.length > 0) {
     const nextSpeaker = queue.shift();
-    const expiresAt = Date.now() + 180000;
     activeSpeakers.set(roomName, {
       socketId: nextSpeaker.socketId,
       username: nextSpeaker.username,
       color: nextSpeaker.color,
-      expiresAt: expiresAt
+      ready: false
     });
 
     io.to(nextSpeaker.socketId).emit('mic_assigned');
-    io.to(roomName).emit('speaker_changed', {
-      username: nextSpeaker.username,
-      color: nextSpeaker.color,
-      timeLeft: 180
-    });
     io.to(roomName).emit('queue_updated', {
       queue: queue.map(q => ({ username: q.username, color: q.color }))
     });
-    startSpeakerTimer(roomName);
+    
+    startSpeakerSetupTimeout(roomName);
   } else {
     io.to(roomName).emit('speaker_changed', null);
     io.to(roomName).emit('queue_updated', { queue: [] });
