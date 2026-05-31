@@ -106,6 +106,13 @@ async function createTables() {
       expires_at TIMESTAMP NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+    `CREATE TABLE IF NOT EXISTS admin_users (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      username VARCHAR(50) NOT NULL UNIQUE,
+      password VARCHAR(255) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   ];
 
   for (const query of queries) {
@@ -132,6 +139,19 @@ async function createTables() {
       );
     } catch (e) {}
   }
+
+  // Seed default admin in database
+  try {
+    const [rows] = await db.query('SELECT id FROM admin_users LIMIT 1');
+    if (rows.length === 0) {
+      await db.query(
+        'INSERT IGNORE INTO admin_users (username, password) VALUES (?, ?)',
+        ['admin', 'admin123']
+      );
+      console.log('👑 تم إدراج حساب المسؤول الافتراضي في قاعدة البيانات');
+    }
+  } catch (e) {}
+
   console.log('✅ تم إنشاء جداول قاعدة البيانات');
 }
 
@@ -318,7 +338,26 @@ io.on('connection', (socket) => {
     const userColor = color || getUserColor(cleanUser);
 
     // Admin password security check
-    if (cleanUser.toLowerCase() === 'admin' && password !== (process.env.ADMIN_PASSWORD || 'admin123')) {
+    let isDbAdmin = false;
+    let dbAdminPassword = null;
+    
+    if (db) {
+      try {
+        const [adminRows] = await db.query('SELECT password FROM admin_users WHERE username = ?', [cleanUser.toLowerCase()]);
+        if (adminRows.length > 0) {
+          isDbAdmin = true;
+          dbAdminPassword = adminRows[0].password;
+        }
+      } catch (e) {}
+    }
+
+    if (isDbAdmin) {
+      if (password !== dbAdminPassword) {
+        socket.emit('error_msg', { message: 'كلمة مرور حساب المسؤول غير صحيحة!' });
+        setTimeout(() => socket.disconnect(), 800);
+        return;
+      }
+    } else if (cleanUser.toLowerCase() === 'admin' && password !== (process.env.ADMIN_PASSWORD || 'admin123')) {
       socket.emit('error_msg', { message: 'كلمة مرور حساب المسؤول غير صحيحة!' });
       setTimeout(() => socket.disconnect(), 800);
       return;
@@ -821,9 +860,11 @@ function findSocketByUsername(targetUsername) {
 }
 
 async function checkIsAdmin(username, roomName) {
-  if (username === 'admin') return true;
   if (db) {
     try {
+      const [adminUsersRow] = await db.query('SELECT id FROM admin_users WHERE username = ?', [username.toLowerCase()]);
+      if (adminUsersRow.length > 0) return true;
+
       const [roomRow] = await db.query('SELECT id FROM rooms WHERE name = ?', [roomName]);
       if (roomRow.length === 0) return false;
       const [adminRow] = await db.query(
@@ -835,6 +876,7 @@ async function checkIsAdmin(username, roomName) {
       return false;
     }
   } else {
+    if (username === 'admin') return true;
     return (inMemoryAdmins[roomName] || []).includes(username);
   }
 }

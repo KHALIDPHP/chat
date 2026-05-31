@@ -843,7 +843,14 @@ socket.on('user_typing',({username:u,isTyping:t})=>{
 socket.on('kicked',({message:m})=>{toast(m,true);setTimeout(()=>location.href='/',2500)});
 socket.on('banned',({message:m})=>{sysMsg('🚫 '+m);setTimeout(()=>location.href='/',3000)});
 socket.on('chat_cleared',({by})=>{document.getElementById('msgs').innerHTML='';sysMsg(`مسح المحادثة بواسطة ${by}`)});
-socket.on('error_msg',({message:m})=>toast(m,true));
+socket.on('error_msg',({message:m})=>{
+  toast(m,true);
+  if (m.includes('كلمة مرور') || m.includes('المسؤول') || m.includes('password') || m.includes('admin')) {
+    setTimeout(() => {
+      location.href = '/';
+    }, 2000);
+  }
+});
 socket.on('mic_lock_status', ({ locked }) => {
   handleMicLockChange(locked);
   toast(locked ? '🔒 تم قفل المايك بواسطة إدارة الغرفة!' : '🔓 تم فتح المايك بواسطة إدارة الغرفة!');
