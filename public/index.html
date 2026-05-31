@@ -637,14 +637,31 @@
         return;
       }
 
-      if (activeTab === 'member' || activeTab === 'registered') {
-        const password = document.getElementById('joinPassword').value.trim();
+      const isLoggingAsAdmin = name.toLowerCase() === 'admin';
+      const password = document.getElementById('joinPassword').value.trim();
+
+      if (isLoggingAsAdmin) {
         if (!password) {
+          // If they typed admin but password field is hidden, show it and request password
+          setTab('registered'); // auto-switch to show password field
+          alert('حساب المسؤول يتطلب كلمة مرور. يرجى إدخالها.');
+          return;
+        }
+        if (password !== 'admin123') {
+          alert('كلمة المرور غير صحيحة لحساب المسؤول!');
+          return;
+        }
+      }
+
+      if (activeTab === 'member' || activeTab === 'registered') {
+        if (!isLoggingAsAdmin && !password) {
           alert('يرجى إدخال كلمة المرور');
           return;
         }
         // Member/Registered name prefixes for visual distinctiveness
-        name = `[${activeTab === 'member' ? 'عضو' : 'مسجل'}] ` + name;
+        if (!isLoggingAsAdmin) {
+          name = `[${activeTab === 'member' ? 'عضو' : 'مسجل'}] ` + name;
+        }
       }
 
       // Store credentials and redirect
@@ -653,9 +670,13 @@
       
       // Set distinct colors based on tab type
       let userColor = '#e53935'; // default red
-      if (activeTab === 'member') userColor = '#1565c0'; // blue for members
-      if (activeTab === 'registered') userColor = '#2e7d32'; // green for registered
+      if (isLoggingAsAdmin) userColor = '#bf360c'; // distinct red/orange for super admin
+      else if (activeTab === 'member') userColor = '#1565c0'; // blue for members
+      else if (activeTab === 'registered') userColor = '#2e7d32'; // green for registered
       sessionStorage.setItem('chatColor', userColor);
+      
+      // Save password in sessionStorage so server can verify it on join_room
+      sessionStorage.setItem('chatPassword', password);
 
       window.location.href = '/chat';
     }

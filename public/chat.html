@@ -317,6 +317,226 @@
     .ctxi:hover{background:#f5f5f5}
     .ctxi.danger{color:#c62828}
     .ctxi.danger:hover{background:#ffebee}
+
+    /* =========== ANNOUNCEMENT BANNER =========== */
+    .announcement-banner {
+      background: linear-gradient(90deg, #fff3e0, #ffe0b2);
+      border-bottom: 2px solid #ffb74d;
+      padding: 6px 12px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: bold;
+      color: #e65100;
+      flex-shrink: 0;
+      z-index: 10;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      animation: slideDown 0.3s ease-out;
+      direction: rtl;
+    }
+    @keyframes slideDown {
+      from { transform: translateY(-100%); }
+      to { transform: translateY(0); }
+    }
+    .announcement-tag {
+      background: #e65100;
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .announcement-banner marquee {
+      flex: 1;
+      font-weight: 700;
+    }
+    .announcement-close {
+      background: none;
+      border: none;
+      color: #e65100;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 0 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .announcement-close:hover {
+      opacity: 0.8;
+    }
+
+    /* =========== ADMIN CONTROL OVERLAY MODAL =========== */
+    .admin-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .admin-modal {
+      background: #fff;
+      width: 90%;
+      max-width: 380px;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+      padding: 20px;
+      direction: rtl;
+      position: relative;
+      animation: scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes scaleUp {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .admin-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+    }
+    .admin-modal-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .admin-modal-close-btn {
+      background: #f0f0f0;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+      transition: background 0.15s;
+    }
+    .admin-modal-close-btn:hover {
+      background: #e0e0e0;
+      color: #333;
+    }
+    .admin-controls-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .admin-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 6px;
+      border: 1px solid #ddd;
+      background: #fafafa;
+      border-radius: 12px;
+      cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      color: #333;
+      transition: all 0.2s ease;
+    }
+    .admin-btn:hover {
+      background: #f0f0f0;
+      border-color: #bbb;
+      transform: translateY(-2px);
+    }
+    .admin-btn:active {
+      transform: translateY(0);
+    }
+    .admin-btn.danger {
+      background: linear-gradient(135deg, #d32f2f, #c62828);
+      color: #fff;
+      border: none;
+    }
+    .admin-btn.danger:hover {
+      background: linear-gradient(135deg, #f44336, #e53935);
+    }
+    .admin-btn.warning {
+      background: linear-gradient(135deg, #f57c00, #e65100);
+      color: #fff;
+      border: none;
+    }
+    .admin-btn.warning:hover {
+      background: linear-gradient(135deg, #ffa726, #fb8c00);
+    }
+    .admin-btn.success {
+      background: linear-gradient(135deg, #388e3c, #2e7d32);
+      color: #fff;
+      border: none;
+    }
+    .admin-btn.success:hover {
+      background: linear-gradient(135deg, #4caf50, #43a047);
+    }
+    .admin-btn-icon {
+      font-size: 20px;
+    }
+    .admin-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-top: 1px solid #eee;
+      padding-top: 16px;
+    }
+    .admin-input-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #555;
+    }
+    .admin-text-input {
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .admin-text-input:focus {
+      border-color: #1565c0;
+    }
+    .admin-submit-btn {
+      width: 100%;
+      padding: 9px;
+      background: #1565c0;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Tajawal', sans-serif;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.15s;
+    }
+    .admin-submit-btn:hover {
+      background: #0d47a1;
+    }
+
+    .ibtn.mic.locked {
+      background: #ffebee !important;
+      border-color: #ef9a9a !important;
+      color: #e53935 !important;
+      cursor: not-allowed !important;
+    }
   </style>
 </head>
 <body>
@@ -342,6 +562,7 @@
   </div>
 
   <button class="hb chat-icon" id="btnChat" title="المحادثة">💬</button>
+  <button class="hb menu-icon" id="adminGearBtn" onclick="toggleAdminPanel()" title="لوحة الإدارة" style="display: none; background: #e09610; color: #fff; border: 1px solid rgba(255,255,255,0.4);">⚙️</button>
   <button class="hb menu-icon" onclick="toggleMenu()">☰</button>
 </header>
 
@@ -365,6 +586,12 @@
 
   <!-- RIGHT: Chat Panel -->
   <div class="chat-panel">
+    <!-- Announcement Banner -->
+    <div class="announcement-banner" id="announcementBanner">
+      <span class="announcement-tag">📢 إعلان</span>
+      <marquee id="announcementText" behavior="scroll" direction="right" scrollamount="4"></marquee>
+      <button class="announcement-close" onclick="closeAnnouncementBanner()">✕</button>
+    </div>
     <div class="msgs" id="msgs"></div>
     <div class="typing-bar" id="typBar" style="display:none">
       <div class="td"></div><div class="td"></div><div class="td"></div>
@@ -394,6 +621,41 @@
     <button class="qb" onclick="qi('🔥')">🔥</button>
   </div>
   <div class="emoji-kb" id="ekb"></div>
+</div>
+
+<!-- ===== ADMIN CONTROL PANEL MODAL ===== -->
+<div class="admin-modal-overlay" id="adminModalOverlay" onclick="handleAdminOverlayClick(event)">
+  <div class="admin-modal">
+    <div class="admin-modal-header">
+      <div class="admin-modal-title">
+        <span>⚙️ لوحة التحكم بالإدارة</span>
+      </div>
+      <button class="admin-modal-close-btn" onclick="toggleAdminPanel(false)">✕</button>
+    </div>
+    <div class="admin-controls-grid">
+      <button class="admin-btn warning" id="btnAdminLockMic" onclick="adminToggleMicLock()">
+        <span class="admin-btn-icon" id="adminLockMicIcon">🔒</span>
+        <span id="adminLockMicText">قفل المايك</span>
+      </button>
+      <button class="admin-btn danger" onclick="adminDropSpeaker()">
+        <span class="admin-btn-icon">🎤</span>
+        <span>سحب المايك</span>
+      </button>
+      <button class="admin-btn danger" onclick="adminClearChat()">
+        <span class="admin-btn-icon">🗑️</span>
+        <span>مسح الدردشة للجميع</span>
+      </button>
+      <button class="admin-btn success" onclick="toggleAnnouncementInput()">
+        <span class="admin-btn-icon">📢</span>
+        <span>إعلان جديد</span>
+      </button>
+    </div>
+    <div class="admin-input-group" id="announcementInputGroup" style="display: none;">
+      <span class="admin-input-label">نص الإعلان الجديد:</span>
+      <input type="text" class="admin-text-input" id="announcementInput" placeholder="اكتب الإعلان هنا..." onkeydown="handleAnnouncementKey(event)">
+      <button class="admin-submit-btn" onclick="adminSubmitAnnouncement()">إرسال الإعلان</button>
+    </div>
+  </div>
 </div>
 
 <div id="audioBox" style="display:none"></div>
@@ -430,12 +692,32 @@ const socket = io({ transports:['websocket','polling'] });
 
 socket.on('connect',()=>{
   loadHistory();
-  socket.emit('join_room',{username,room,color:myColor});
+  const password = sessionStorage.getItem('chatPassword') || '';
+  socket.emit('join_room',{username,room,color:myColor,password});
 });
 socket.on('disconnect',()=>toast('انقطع الاتصال...',true));
-socket.on('reconnect',()=>socket.emit('join_room',{username,room,color:myColor}));
+socket.on('reconnect',()=>{
+  const password = sessionStorage.getItem('chatPassword') || '';
+  socket.emit('join_room',{username,room,color:myColor,password});
+});
 
 socket.on('joined_room', d=>{
+  isAdmin = !!d.isAdmin;
+  const gearBtn = document.getElementById('adminGearBtn');
+  if (gearBtn) {
+    gearBtn.style.display = isAdmin ? 'block' : 'none';
+  }
+  
+  if (d.isMicLocked) {
+    handleMicLockChange(true);
+  } else {
+    handleMicLockChange(false);
+  }
+
+  if (d.announcement) {
+    handleAnnouncementChange(d.announcement);
+  }
+
   renderUsers(d.users||[]);
   sysMsg(`مرحباً ${d.username} في غرفة ${d.room} 👋`);
   if (d.speaker) {
@@ -482,6 +764,13 @@ socket.on('kicked',({message:m})=>{toast(m,true);setTimeout(()=>location.href='/
 socket.on('banned',({message:m})=>{sysMsg('🚫 '+m);setTimeout(()=>location.href='/',3000)});
 socket.on('chat_cleared',({by})=>{document.getElementById('msgs').innerHTML='';sysMsg(`مسح المحادثة بواسطة ${by}`)});
 socket.on('error_msg',({message:m})=>toast(m,true));
+socket.on('mic_lock_status', ({ locked }) => {
+  handleMicLockChange(locked);
+  toast(locked ? '🔒 تم قفل المايك بواسطة إدارة الغرفة!' : '🔓 تم فتح المايك بواسطة إدارة الغرفة!');
+});
+socket.on('announcement_updated', ({ text }) => {
+  handleAnnouncementChange(text);
+});
 
 /* ===================================================
    USERS PANEL
@@ -651,6 +940,10 @@ function handleMicButtonClick() {
     document.getElementById('micBtn').classList.remove('on');
     toast('✋ تم إنزال اليد والتراجع عن طلب المايك');
   } else {
+    if (isMicLocked && !isAdmin) {
+      toast('⚠️ المايك مقفل حالياً بواسطة إدارة الغرفة!', true);
+      return;
+    }
     navigator.mediaDevices.getUserMedia({ audio: true, video: false })
       .then(stream => {
         stream.getTracks().forEach(t => t.stop()); // request permission only
@@ -962,7 +1255,127 @@ document.getElementById('ctxKick').onclick=()=>{if(ctxTarget&&confirm(`طرد ${
 document.getElementById('ctxBan').onclick=()=>{if(ctxTarget){const r=prompt('سبب الحظر:');socket.emit('ban_user',{targetUsername:ctxTarget,reason:r||'لا يوجد سبب'})}};
 document.getElementById('ctxAdmin').onclick=()=>{if(ctxTarget&&confirm(`تعيين ${ctxTarget} مشرفاً؟`))socket.emit('make_admin',{targetUsername:ctxTarget})};
 
-setTimeout(()=>{isAdmin=true},600);
+let isMicLocked = false;
+
+function handleMicLockChange(locked) {
+  isMicLocked = locked;
+  const micBtn = document.getElementById('micBtn');
+  if (!micBtn) return;
+
+  if (locked) {
+    if (!isAdmin) {
+      micBtn.classList.add('locked');
+      micBtn.title = 'المايك مقفل بواسطة الإدارة';
+    } else {
+      micBtn.classList.remove('locked');
+      micBtn.title = 'المايك مقفل (مفتوح لك كمشرف)';
+    }
+    const lockText = document.getElementById('adminLockMicText');
+    const lockIcon = document.getElementById('adminLockMicIcon');
+    if (lockText) lockText.textContent = 'فتح المايك';
+    if (lockIcon) lockIcon.textContent = '🔓';
+    const lockBtn = document.getElementById('btnAdminLockMic');
+    if (lockBtn) {
+      lockBtn.classList.remove('warning');
+      lockBtn.classList.add('success');
+    }
+  } else {
+    micBtn.classList.remove('locked');
+    micBtn.title = 'الغرفة الصوتية';
+    const lockText = document.getElementById('adminLockMicText');
+    const lockIcon = document.getElementById('adminLockMicIcon');
+    if (lockText) lockText.textContent = 'قفل المايك';
+    if (lockIcon) lockIcon.textContent = '🔒';
+    const lockBtn = document.getElementById('btnAdminLockMic');
+    if (lockBtn) {
+      lockBtn.classList.remove('success');
+      lockBtn.classList.add('warning');
+    }
+  }
+}
+
+function handleAnnouncementChange(text) {
+  const banner = document.getElementById('announcementBanner');
+  const textEl = document.getElementById('announcementText');
+  if (!banner || !textEl) return;
+
+  if (text && text.trim() !== '') {
+    textEl.textContent = text;
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+    textEl.textContent = '';
+  }
+}
+
+function closeAnnouncementBanner() {
+  const banner = document.getElementById('announcementBanner');
+  if (banner) banner.style.display = 'none';
+}
+
+function toggleAdminPanel(show) {
+  const overlay = document.getElementById('adminModalOverlay');
+  if (!overlay) return;
+  if (show === undefined) {
+    show = overlay.style.display !== 'flex';
+  }
+  overlay.style.display = show ? 'flex' : 'none';
+  if (show) {
+    handleMicLockChange(isMicLocked);
+  }
+}
+
+function handleAdminOverlayClick(e) {
+  if (e.target.id === 'adminModalOverlay') {
+    toggleAdminPanel(false);
+  }
+}
+
+function adminToggleMicLock() {
+  socket.emit('lock_mic', { locked: !isMicLocked });
+  toggleAdminPanel(false);
+}
+
+function adminDropSpeaker() {
+  if (confirm('هل أنت متأكد من سحب المايك من المتحدث الحالي؟')) {
+    socket.emit('drop_speaker');
+    toggleAdminPanel(false);
+  }
+}
+
+function adminClearChat() {
+  if (confirm('هل أنت متأكد من مسح جميع الرسائل في الغرفة؟')) {
+    socket.emit('clear_chat');
+    toggleAdminPanel(false);
+  }
+}
+
+function toggleAnnouncementInput() {
+  const group = document.getElementById('announcementInputGroup');
+  if (group) {
+    group.style.display = group.style.display === 'none' ? 'flex' : 'none';
+    if (group.style.display === 'flex') {
+      document.getElementById('announcementInput').focus();
+    }
+  }
+}
+
+function handleAnnouncementKey(e) {
+  if (e.key === 'Enter') {
+    adminSubmitAnnouncement();
+  }
+}
+
+function adminSubmitAnnouncement() {
+  const input = document.getElementById('announcementInput');
+  if (!input) return;
+  const text = input.value.trim();
+  socket.emit('broadcast_announcement', { text });
+  input.value = '';
+  const group = document.getElementById('announcementInputGroup');
+  if (group) group.style.display = 'none';
+  toggleAdminPanel(false);
+}
 
 function toggleMenu(){toast('غرفة: '+room)}
 
