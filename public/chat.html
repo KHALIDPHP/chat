@@ -673,6 +673,26 @@
   <div class="emoji-kb" id="ekb"></div>
 </div>
 
+<!-- ===== CUSTOM LOGOUT CONFIRM MODAL ===== -->
+<div class="admin-modal-overlay" id="logoutConfirmModal" onclick="handleLogoutOverlayClick(event)">
+  <div class="admin-modal" style="max-width: 320px; text-align: center;">
+    <div class="admin-modal-header" style="border: none; margin-bottom: 8px; justify-content: center;">
+      <div class="admin-modal-title" style="font-size: 18px;">🚪 تسجيل الخروج</div>
+    </div>
+    <div style="font-size: 15px; font-weight: 700; color: #555; margin-bottom: 20px;">
+      هل تريد الخروج من الغرفة بالفعل؟
+    </div>
+    <div style="display: flex; gap: 12px; justify-content: center;">
+      <button class="admin-btn danger" onclick="confirmLogoutAction()" style="flex: 1; padding: 10px; flex-direction: row; font-size: 14px;">
+        <span>نعم</span>
+      </button>
+      <button class="admin-btn" onclick="closeLogoutModal()" style="flex: 1; padding: 10px; flex-direction: row; font-size: 14px; background: #eee;">
+        <span>لا</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== ADMIN CONTROL PANEL MODAL ===== -->
 <div class="admin-modal-overlay" id="adminModalOverlay" onclick="handleAdminOverlayClick(event)">
   <div class="admin-modal">
@@ -1439,16 +1459,33 @@ function toggleMenu(e) {
 }
 
 function logout() {
-  if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
-    sessionStorage.removeItem('chatUsername');
-    sessionStorage.removeItem('chatRoom');
-    sessionStorage.removeItem('chatColor');
-    sessionStorage.removeItem('chatPassword');
-    if (inVoice) {
-      leaveVoice();
-    }
-    window.location.href = '/';
+  const m = document.getElementById('menuDropdown');
+  if (m) m.style.display = 'none';
+  const modal = document.getElementById('logoutConfirmModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeLogoutModal() {
+  const modal = document.getElementById('logoutConfirmModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function handleLogoutOverlayClick(e) {
+  if (e.target.id === 'logoutConfirmModal') {
+    closeLogoutModal();
   }
+}
+
+function confirmLogoutAction() {
+  closeLogoutModal();
+  sessionStorage.removeItem('chatUsername');
+  sessionStorage.removeItem('chatRoom');
+  sessionStorage.removeItem('chatColor');
+  sessionStorage.removeItem('chatPassword');
+  if (inVoice) {
+    leaveVoice();
+  }
+  window.location.href = '/';
 }
 
 function toggleUsers(show){
