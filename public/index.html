@@ -646,8 +646,21 @@
         return;
       }
 
-      const isLoggingAsAdmin = name.toLowerCase() === 'admin';
       const password = document.getElementById('joinPassword').value.trim();
+
+      if (name === 'خالد') {
+        if (activeTab !== 'registered') {
+          setTab('registered');
+          showDialogError('اسم "خالد" مسجل، يرجى الدخول من تبويب "مسجل" وكتابة كلمة المرور.');
+          return;
+        }
+        if (password !== '1234') {
+          showDialogError('كلمة المرور غير صحيحة لحساب خالد!');
+          return;
+        }
+      }
+
+      const isLoggingAsAdmin = name.toLowerCase() === 'admin';
 
       if (isLoggingAsAdmin) {
         if (!password) {

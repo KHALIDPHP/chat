@@ -9,6 +9,20 @@
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     html,body{height:100%;overflow:hidden}
 
+    .vip-badge {
+      width: 18px;
+      height: 18px;
+      vertical-align: middle;
+      margin-left: 6px;
+      margin-right: 2px;
+      display: inline-block;
+      animation: badge-glow 2s ease-in-out infinite alternate;
+    }
+    @keyframes badge-glow {
+      from { filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.4)); }
+      to { filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.8)); }
+    }
+
     body{
       font-family:'Tajawal',sans-serif;
       background:#e0e0e0;
@@ -752,6 +766,12 @@
 =================================================== */
 const username = sessionStorage.getItem('chatUsername');
 const room     = sessionStorage.getItem('chatRoom');
+
+function isKhalid(name) {
+  if (!name) return false;
+  const raw = name.replace(/^\[(عضو|مسجل)\]\s*/, '');
+  return raw === 'خالد';
+}
 const myColor  = sessionStorage.getItem('chatColor') || '#e53935';
 let activeSpeaker = null;
 
@@ -761,7 +781,8 @@ function updateHeaderDisplay() {
   const roomEl = document.getElementById('hdrRoom');
   if (!roomEl) return;
   if (activeSpeaker && activeSpeaker.username) {
-    roomEl.textContent = `${room} - المتحدث: ${activeSpeaker.username}`;
+    const isKh = isKhalid(activeSpeaker.username);
+    roomEl.textContent = `${room} - المتحدث: ${isKh ? '👑 ' : ''}${activeSpeaker.username}`;
   } else {
     roomEl.textContent = room;
   }
@@ -910,11 +931,15 @@ function renderUsers(users){
       icon = '';
     }
 
+    const isKh = isKhalid(u.username);
     const row=document.createElement('div');
     row.className='user-row'+(isSpeaking?' speaking':'');
     row.innerHTML=`
       <div class="ua" style="background:${clr}">${u.username[0]}</div>
-      <span class="un" style="color:${clr}">${esc(u.username)}${isMe?' (أنت)':''}</span>
+      <span class="un" style="color:${clr}">
+        ${isKh ? '<img src="/images/vip_badge.png" class="vip-badge" alt="VIP">' : ''}
+        ${esc(u.username)}${isMe?' (أنت)':''}
+      </span>
       <span class="ui" style="font-size:13px; font-weight:bold; color:#e09610">${icon}</span>
     `;
     if(!isMe&&isAdmin){
@@ -950,9 +975,13 @@ function addMsg(d){
   const isMe=d.username===username;
   const row=document.createElement('div');
   row.className='mrow';
+  const isKh = isKhalid(d.username);
   row.innerHTML=`
     <div class="mrow-hdr">
-      <span class="mrow-name" style="color:${clr}">${esc(d.username)}</span>
+      <span class="mrow-name" style="color:${clr}">
+        ${isKh ? '<img src="/images/vip_badge.png" class="vip-badge" alt="VIP">' : ''}
+        ${esc(d.username)}
+      </span>
       <span class="mrow-time">${d.time||ft()}</span>
     </div>
     <div class="mrow-text" style="color:${isMe?clr:tclr}">${fmsg(d.message)}</div>

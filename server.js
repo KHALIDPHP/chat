@@ -618,6 +618,16 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // Special registered user check for خالد
+    const rawUser = cleanUser.replace(/^\[(عضو|مسجل)\]\s*/, '');
+    if (rawUser === 'خالد') {
+      if (password !== '1234') {
+        socket.emit('error_msg', { message: 'كلمة المرور غير صحيحة لحساب خالد!' });
+        setTimeout(() => socket.disconnect(), 800);
+        return;
+      }
+    }
+
     // Check if banned
     if (db) {
       try {
