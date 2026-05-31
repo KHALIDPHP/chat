@@ -761,7 +761,6 @@ function tc(name){let h=0;for(let c of name)h=c.charCodeAt(0)+((h<<5)-h)+7;retur
 const socket = io({ transports:['websocket','polling'] });
 
 socket.on('connect',()=>{
-  loadHistory();
   const password = sessionStorage.getItem('chatPassword') || '';
   socket.emit('join_room',{username,room,color:myColor,password});
 });
