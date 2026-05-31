@@ -310,6 +310,8 @@ app.get('/api/admin/stats', async (req, res) => {
       totalMessages = Object.values(inMemoryMessages).reduce((s, m) => s + m.length, 0);
     }
     res.json({ success: true, stats: { totalOnline, totalRooms, totalMessages, roomStats } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
