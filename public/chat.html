@@ -738,6 +738,7 @@
 const username = sessionStorage.getItem('chatUsername');
 const room     = sessionStorage.getItem('chatRoom');
 const myColor  = sessionStorage.getItem('chatColor') || '#e53935';
+let activeSpeaker = null;
 
 if (!username || !room) { window.location.href = '/'; }
 
@@ -999,7 +1000,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('#ekb')&&e.target.id!
 const STUN={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]};
 
 let isSpeaker = false, isQueued = false;
-let activeSpeaker = null, micQueueList = [];
+let micQueueList = [];
 let activeSpeakerSeconds = 0, speakerTimerInt = null;
 let isMuted = false, isSpeakerMuted = false;
 let localStream = null, pcs = {}, speakDets = {};
