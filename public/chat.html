@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>غرفة الدردشة</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/chat.css">
+</head>
+<body>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Connection Status -->
+<div class="connection-status" id="connectionStatus">
+  <span>⚡</span> <span id="connStatusText">جاري الاتصال...</span>
+</div>
+
+<!-- Overlay for mobile sidebars -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- Admin Panel (Drawer) -->
+<div class="admin-panel" id="adminPanel">
+  <div class="admin-panel-header">
+    <span style="font-size:16px;font-weight:700;color:var(--text-accent);">👑 لوحة المشرف</span>
+    <button onclick="closeAdminPanel()" class="header-btn">✕</button>
+  </div>
+
+  <div class="admin-section">
+    <div class="admin-section-title">⚙️ إجراءات الغرفة</div>
+    <div class="flex flex-col gap-2">
+      <button class="btn btn-ghost w-full" onclick="clearChat()" style="font-size:13px;">
+        🗑️ مسح المحادثة
+      </button>
+    </div>
+  </div>
+
+  <div class="admin-section">
+    <div class="admin-section-title">👥 المستخدمون في الغرفة</div>
+    <div id="adminUsersList"></div>
+  </div>
+</div>
+
+<!-- Users Drawer (Mobile) -->
+<div class="users-drawer" id="usersDrawer">
+  <div style="padding:14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+    <span style="font-size:14px;font-weight:700;">المتصلون</span>
+    <button onclick="closeUsersDrawer()" class="header-btn">✕</button>
+  </div>
+  <div id="usersDrawerList" style="padding:8px;"></div>
+</div>
+
+<!-- Context Menu -->
+<div class="context-menu" id="contextMenu">
+  <div class="context-menu-item" id="ctxKick">🚫 طرد من الغرفة</div>
+  <div class="context-menu-item danger" id="ctxBan">🔨 حظر المستخدم</div>
+  <div class="context-menu-item" id="ctxMod">👑 تعيين مشرف</div>
+</div>
+
+<!-- Main Chat Layout -->
+<div class="chat-layout">
+
+  <!-- Left Sidebar: Rooms -->
+  <aside class="rooms-sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">💬</div>
+        <span class="sidebar-logo-text">شات عربي</span>
+      </div>
+      <div class="sidebar-title">🏠 الغرف</div>
+    </div>
+    <div class="sidebar-rooms-list" id="sidebarRoomsList"></div>
+  </aside>
+
+  <!-- Top Header -->
+  <header class="chat-header">
+    <!-- Mobile menu -->
+    <button class="header-btn mobile-toggle-btn" id="mobileMenuBtn" title="القائمة">☰</button>
+
+    <div class="header-room-info">
+      <div class="header-room-icon" id="headerRoomIcon">💬</div>
+      <div>
+        <div class="header-room-name" id="headerRoomName">الغرفة</div>
+        <div class="header-room-meta">
+          <div class="online-dot" style="width:8px;height:8px;"></div>
+          <span id="headerOnlineCount">0</span> متصل
+        </div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Users list toggle -->
+      <button class="header-btn" id="usersToggleBtn" title="المتصلون" onclick="toggleUsersDrawer()">
+        👥
+        <span class="badge-count" id="usersCountBadge">0</span>
+      </button>
+      <!-- Admin Panel -->
+      <button class="header-btn" id="adminBtn" title="لوحة المشرف" onclick="openAdminPanel()" style="display:none">
+        👑
+      </button>
+      <!-- Leave Room -->
+      <button class="header-btn btn-danger" title="مغادرة الغرفة" onclick="leaveRoom()">
+        🚪
+      </button>
+    </div>
+  </header>
+
+  <!-- Messages Area -->
+  <main class="messages-area">
+    <div class="messages-container" id="messagesContainer">
+      <!-- Messages appear here -->
+    </div>
+
+    <!-- Typing Indicator -->
+    <div class="typing-indicator" id="typingIndicator">
+      <div id="typingDots" class="typing-dots" style="display:none">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+      <span id="typingText"></span>
+    </div>
+
+    <!-- Scroll to Bottom Button -->
+    <button class="scroll-to-bottom" id="scrollToBottomBtn" onclick="scrollToBottom()">
+      ⬇ رسائل جديدة
+    </button>
+
+    <!-- Emoji Panel -->
+    <div class="emoji-panel" id="emojiPanel"></div>
+
+    <!-- Input Area -->
+    <div class="input-area">
+      <div class="input-wrapper">
+        <button class="input-btn emoji-btn" id="emojiToggleBtn" title="إيموجي">😊</button>
+        <input
+          type="text"
+          id="messageInput"
+          placeholder="اكتب رسالة..."
+          maxlength="1000"
+          autocomplete="off"
+          dir="auto"
+        >
+        <button class="input-btn send-btn" id="sendBtn" title="إرسال">
+          ➤
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Right Sidebar: Online Users -->
+  <aside class="users-sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">
+        👥 المتصلون
+        <span id="onlineCount" class="badge badge-success" style="margin-right:auto">0</span>
+      </div>
+    </div>
+    <div class="users-list" id="usersList"></div>
+  </aside>
+
+</div>
+
+<!-- Socket.io -->
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ============================================
+// Chat Client - Arabic Real-Time Chat
+// ============================================
+
+// Load session data
+const username = sessionStorage.getItem('chatUsername');
+const room     = sessionStorage.getItem('chatRoom');
+const myColor  = sessionStorage.getItem('chatColor');
+
+// Redirect if no session
+if (!username || !room) {
+  window.location.href = '/';
+}
+
+// Room emojis
+const roomEmojis = {
+  'عام': '💬', 'تقنية': '💻', 'ترفيه': '🎭', 'رياضة': '⚽',
+  'موسيقى': '🎵', 'ألعاب': '🎮', 'علوم': '🔬', 'default': '🏠'
+};
+
+// State
+let isAdmin = false;
+let typingTimer = null;
+let isTyping = false;
+let currentUsers = [];
+let isAtBottom = true;
+let contextMenuTarget = null;
+const allEmojis = ['😀','😂','🤣','😍','🥰','😊','😎','🤩','😏','😢','😭','😤','😡','🤔','🤗','👍','👎','❤️','💔','💯','🔥','⭐','🎉','🎊','✅','❌','🚀','💪','🙏','👋','💬','📢','🎵','🎮','⚽','🏀','🏆','🌟','💫','✨','🍕','🎂','🎁','😴','🤯','🥳','😇','🤠','👀','💡'];
+
+// Init page
+document.title = `${room} - شات عربي`;
+document.getElementById('headerRoomName').textContent = room;
+document.getElementById('headerRoomIcon').textContent = roomEmojis[room] || roomEmojis['default'];
+
+// ============================================
+// Socket.io Connection
+// ============================================
+const socket = io({ transports: ['websocket', 'polling'] });
+
+// Connection events
+socket.on('connect', () => {
+  console.log('🔌 متصل:', socket.id);
+  hideConnectionStatus();
+
+  // Load history then join
+  loadMessageHistory();
+
+  socket.emit('join_room', { username, room, color: myColor });
+});
+
+socket.on('disconnect', () => {
+  showConnectionStatus('انقطع الاتصال... جاري إعادة الاتصال');
+});
+
+socket.on('connect_error', () => {
+  showConnectionStatus('خطأ في الاتصال');
+});
+
+socket.on('reconnect', () => {
+  hideConnectionStatus();
+  socket.emit('join_room', { username, room, color: myColor });
+  showToast('تم إعادة الاتصال', 'success');
+});
+
+// ============================================
+// Room Events
+// ============================================
+socket.on('joined_room', (data) => {
+  updateUsers(data.users || []);
+  addSystemMessage(`مرحباً ${data.username}! انضممت إلى غرفة ${data.room}`);
+});
+
+socket.on('user_joined', (data) => {
+  updateUsers(data.users || []);
+  addSystemMessage(`${data.username} انضم إلى الغرفة 👋`);
+});
+
+socket.on('user_left', (data) => {
+  updateUsers(data.users || []);
+  if (data.kickedBy) {
+    addSystemMessage(`تم طرد ${data.username} بواسطة ${data.kickedBy} 🚫`);
+  } else {
+    addSystemMessage(`${data.username} غادر الغرفة 👋`);
+  }
+});
+
+// ============================================
+// Message Events
+// ============================================
+socket.on('new_message', (data) => {
+  const isOwn = data.username === username;
+  if (data.type === 'system' || data.username === 'النظام') {
+    addSystemMessage(data.message, data.color);
+  } else {
+    addMessage(data, isOwn);
+  }
+});
+
+// ============================================
+// Typing Events
+// ============================================
+socket.on('user_typing', ({ username: typer, isTyping: typing }) => {
+  if (typer === username) return;
+  if (typing) {
+    document.getElementById('typingDots').style.display = 'flex';
+    document.getElementById('typingText').textContent = `${typer} يكتب...`;
+  } else {
+    document.getElementById('typingDots').style.display = 'none';
+    document.getElementById('typingText').textContent = '';
+  }
+});
+
+// ============================================
+// Admin Events
+// ============================================
+socket.on('kicked', ({ message, by }) => {
+  showToast(`${message}`, 'error');
+  setTimeout(() => { window.location.href = '/'; }, 2500);
+});
+
+socket.on('banned', ({ message }) => {
+  addSystemMessage(`🚫 ${message}`);
+  showToast(message, 'error');
+  setTimeout(() => { window.location.href = '/'; }, 3000);
+});
+
+socket.on('chat_cleared', ({ by }) => {
+  document.getElementById('messagesContainer').innerHTML = '';
+  addSystemMessage(`تم مسح المحادثة بواسطة المشرف ${by}`);
+});
+
+socket.on('error_msg', ({ message }) => {
+  showToast(message, 'error');
+});
+
+socket.on('users_list', ({ users }) => {
+  updateUsers(users);
+});
+
+// ============================================
+// Load Message History
+// ============================================
+async function loadMessageHistory() {
+  try {
+    const res = await fetch(`/api/messages/${encodeURIComponent(room)}`);
+    const data = await res.json();
+    if (data.success && data.messages.length > 0) {
+      const container = document.getElementById('messagesContainer');
+      container.innerHTML = '';
+      data.messages.forEach(msg => {
+        if (msg.message_type === 'system') {
+          addSystemMessage(msg.message);
+        } else {
+          addMessage({
+            username: msg.username,
+            message: msg.message,
+            color: getColor(msg.username),
+            time: formatTime(new Date(msg.created_at)),
+            type: 'text'
+          }, msg.username === username);
+        }
+      });
+      scrollToBottom();
+    }
+  } catch (e) {
+    console.log('No message history');
+  }
+}
+
+// ============================================
+// Message Rendering
+// ============================================
+function addMessage(data, isOwn) {
+  const container = document.getElementById('messagesContainer');
+  const div = document.createElement('div');
+  div.className = `message-item ${isOwn ? 'own' : 'other'}`;
+
+  const color = data.color || getColor(data.username);
+  const initial = data.username[0] || '?';
+
+  div.innerHTML = `
+    ${!isOwn ? `
+      <div class="message-header">
+        <div class="msg-avatar" style="background:${color}">${initial}</div>
+        <span class="msg-username" style="color:${color}">${escapeHtml(data.username)}</span>
+        <span class="msg-time">${data.time || ''}</span>
+      </div>
+    ` : `
+      <div class="message-header" style="justify-content:flex-end;">
+        <span class="msg-time">${data.time || ''}</span>
+        <span class="msg-username" style="color:${color}">${escapeHtml(data.username)}</span>
+        <div class="msg-avatar" style="background:${color}">${initial}</div>
+      </div>
+    `}
+    <div class="message-bubble">${formatMessage(data.message)}</div>
+  `;
+
+  container.appendChild(div);
+  autoScroll();
+}
+
+function addSystemMessage(text, color) {
+  const container = document.getElementById('messagesContainer');
+  const div = document.createElement('div');
+  div.className = 'message-item system';
+  div.innerHTML = `<div class="message-bubble" style="${color ? `color:${color}` : ''}">${escapeHtml(text)}</div>`;
+  container.appendChild(div);
+  autoScroll();
+}
+
+function formatMessage(text) {
+  // Escape HTML, preserve emoji, linkify
+  let safe = escapeHtml(text);
+  // Basic URL detection
+  safe = safe.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--accent-light)">$1</a>');
+  return safe;
+}
+
+// ============================================
+// Send Message
+// ============================================
+const messageInput = document.getElementById('messageInput');
+const sendBtn = document.getElementById('sendBtn');
+
+function sendMessage() {
+  const msg = messageInput.value.trim();
+  if (!msg) return;
+
+  socket.emit('send_message', { message: msg });
+  messageInput.value = '';
+  stopTyping();
+  emojiPanel.classList.remove('open');
+}
+
+sendBtn.addEventListener('click', sendMessage);
+messageInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// ============================================
+// Typing Indicator
+// ============================================
+messageInput.addEventListener('input', () => {
+  if (!isTyping) {
+    isTyping = true;
+    socket.emit('typing', { isTyping: true });
+  }
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(stopTyping, 2000);
+});
+
+function stopTyping() {
+  if (isTyping) {
+    isTyping = false;
+    socket.emit('typing', { isTyping: false });
+  }
+  clearTimeout(typingTimer);
+}
+
+// ============================================
+// Emoji Panel
+// ============================================
+const emojiPanel = document.getElementById('emojiPanel');
+
+// Build emoji grid
+allEmojis.forEach(emoji => {
+  const btn = document.createElement('div');
+  btn.className = 'emoji-item';
+  btn.textContent = emoji;
+  btn.addEventListener('click', () => {
+    messageInput.value += emoji;
+    messageInput.focus();
+  });
+  emojiPanel.appendChild(btn);
+});
+
+document.getElementById('emojiToggleBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  emojiPanel.classList.toggle('open');
+});
+
+document.addEventListener('click', (e) => {
+  if (!emojiPanel.contains(e.target) && e.target !== document.getElementById('emojiToggleBtn')) {
+    emojiPanel.classList.remove('open');
+  }
+});
+
+// ============================================
+// Users List
+// ============================================
+function updateUsers(users) {
+  currentUsers = users;
+  const count = users.length;
+
+  document.getElementById('headerOnlineCount').textContent = count;
+  document.getElementById('onlineCount').textContent = count;
+  document.getElementById('usersCountBadge').textContent = count;
+
+  renderUsersList('usersList', users);
+  renderUsersList('usersDrawerList', users);
+  renderAdminUsersList(users);
+}
+
+function renderUsersList(containerId, users) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  users.forEach(user => {
+    const isMe = user.username === username;
+    const div = document.createElement('div');
+    div.className = `user-item ${isMe ? 'me' : ''}`;
+    div.innerHTML = `
+      <div class="user-avatar" style="background:${user.color || getColor(user.username)}">${user.username[0]}</div>
+      <span class="user-name">${escapeHtml(user.username)}${isMe ? ' (أنت)' : ''}</span>
+      ${isMe ? '<span class="user-badge">✨</span>' : ''}
+    `;
+    if (!isMe && isAdmin) {
+      div.addEventListener('contextmenu', (e) => showContextMenu(e, user.username));
+    }
+    container.appendChild(div);
+  });
+}
+
+function renderAdminUsersList(users) {
+  if (!isAdmin) return;
+  const container = document.getElementById('adminUsersList');
+  container.innerHTML = '';
+  users.forEach(user => {
+    if (user.username === username) return;
+    const div = document.createElement('div');
+    div.className = 'admin-user-item';
+    div.innerHTML = `
+      <div class="user-avatar" style="background:${user.color || getColor(user.username)};width:28px;height:28px;font-size:12px;">${user.username[0]}</div>
+      <span style="flex:1;font-size:13px;font-weight:600;">${escapeHtml(user.username)}</span>
+      <div class="admin-user-actions">
+        <button class="admin-action-btn kick-btn" onclick="kickUser('${user.username}')">طرد</button>
+        <button class="admin-action-btn ban-btn" onclick="banUser('${user.username}')">حظر</button>
+        <button class="admin-action-btn mod-btn" onclick="makeAdmin('${user.username}')">مشرف</button>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// ============================================
+// Admin Actions
+// ============================================
+function kickUser(target) {
+  if (confirm(`هل تريد طرد ${target}؟`)) {
+    socket.emit('kick_user', { targetUsername: target });
+  }
+}
+
+function banUser(target) {
+  const reason = prompt(`سبب حظر ${target}:`);
+  socket.emit('ban_user', { targetUsername: target, reason: reason || 'لا يوجد سبب' });
+}
+
+function makeAdmin(target) {
+  if (confirm(`هل تريد تعيين ${target} مشرفاً؟`)) {
+    socket.emit('make_admin', { targetUsername: target });
+  }
+}
+
+function clearChat() {
+  if (confirm('هل تريد مسح المحادثة بالكامل؟')) {
+    socket.emit('clear_chat');
+    closeAdminPanel();
+  }
+}
+
+// ============================================
+// Admin Panel
+// ============================================
+function openAdminPanel() {
+  document.getElementById('adminPanel').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('active');
+  renderAdminUsersList(currentUsers);
+}
+
+function closeAdminPanel() {
+  document.getElementById('adminPanel').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('active');
+}
+
+// Check admin status after join
+function checkAdminStatus() {
+  // Simplified: if username is 'admin' or room creator
+  // Server handles actual auth; just show UI
+  // We show admin button for all and server validates
+  isAdmin = true;
+  document.getElementById('adminBtn').style.display = 'flex';
+  renderAdminUsersList(currentUsers);
+}
+
+// Show admin panel for all (server validates)
+setTimeout(checkAdminStatus, 1000);
+
+// ============================================
+// Load Sidebar Rooms
+// ============================================
+async function loadSidebarRooms() {
+  try {
+    const res = await fetch('/api/rooms');
+    const data = await res.json();
+    const list = document.getElementById('sidebarRoomsList');
+    list.innerHTML = '';
+    (data.rooms || []).forEach(r => {
+      const emoji = roomEmojis[r.name] || roomEmojis['default'];
+      const div = document.createElement('div');
+      div.className = `sidebar-room-item ${r.name === room ? 'active' : ''}`;
+      div.innerHTML = `
+        <span class="sidebar-room-emoji">${emoji}</span>
+        <span class="sidebar-room-name">${escapeHtml(r.name)}</span>
+        <span class="sidebar-room-count">${r.online || 0}</span>
+      `;
+      div.addEventListener('click', () => {
+        if (r.name !== room) {
+          sessionStorage.setItem('chatRoom', r.name);
+          window.location.reload();
+        }
+      });
+      list.appendChild(div);
+    });
+  } catch (e) {}
+}
+
+loadSidebarRooms();
+setInterval(loadSidebarRooms, 20000);
+
+// ============================================
+// Context Menu
+// ============================================
+const contextMenu = document.getElementById('contextMenu');
+
+function showContextMenu(e, targetUser) {
+  e.preventDefault();
+  contextMenuTarget = targetUser;
+  const menu = contextMenu;
+  menu.style.top = `${e.clientY}px`;
+  // RTL: position from right edge
+  menu.style.right = `${window.innerWidth - e.clientX}px`;
+  menu.style.left = 'auto';
+  menu.classList.add('open');
+}
+
+document.addEventListener('click', () => contextMenu.classList.remove('open'));
+
+document.getElementById('ctxKick').addEventListener('click', () => {
+  if (contextMenuTarget) kickUser(contextMenuTarget);
+});
+document.getElementById('ctxBan').addEventListener('click', () => {
+  if (contextMenuTarget) banUser(contextMenuTarget);
+});
+document.getElementById('ctxMod').addEventListener('click', () => {
+  if (contextMenuTarget) makeAdmin(contextMenuTarget);
+});
+
+// ============================================
+// Scroll Management
+// ============================================
+const msgContainer = document.getElementById('messagesContainer');
+const scrollBtn = document.getElementById('scrollToBottomBtn');
+
+msgContainer.addEventListener('scroll', () => {
+  const { scrollTop, scrollHeight, clientHeight } = msgContainer;
+  isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
+  scrollBtn.classList.toggle('visible', !isAtBottom);
+});
+
+function autoScroll() {
+  if (isAtBottom) scrollToBottom();
+}
+
+function scrollToBottom() {
+  msgContainer.scrollTo({ top: msgContainer.scrollHeight, behavior: 'smooth' });
+  scrollBtn.classList.remove('visible');
+}
+
+// ============================================
+// Mobile
+// ============================================
+function toggleUsersDrawer() {
+  document.getElementById('usersDrawer').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('active');
+}
+
+function closeUsersDrawer() {
+  document.getElementById('usersDrawer').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('active');
+}
+
+document.getElementById('sidebarOverlay').addEventListener('click', () => {
+  closeAdminPanel();
+  closeUsersDrawer();
+});
+
+// ============================================
+// Leave Room
+// ============================================
+function leaveRoom() {
+  sessionStorage.clear();
+  socket.disconnect();
+  window.location.href = '/';
+}
+
+// ============================================
+// Connection Status
+// ============================================
+function showConnectionStatus(msg) {
+  const el = document.getElementById('connectionStatus');
+  document.getElementById('connStatusText').textContent = msg;
+  el.classList.add('show');
+}
+
+function hideConnectionStatus() {
+  document.getElementById('connectionStatus').classList.remove('show');
+}
+
+// ============================================
+// Utils
+// ============================================
+const colorsArr = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#1abc9c','#3498db','#9b59b6','#e91e63','#ff5722','#00bcd4','#8bc34a','#ff9800'];
+
+function getColor(name) {
+  let h = 0;
+  for (let c of name) h = c.charCodeAt(0) + ((h << 5) - h);
+  return colorsArr[Math.abs(h) % colorsArr.length];
+}
+
+function formatTime(date = new Date()) {
+  return date.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(str));
+  return d.innerHTML;
+}
+
+function showToast(msg, type = 'info') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  t.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// Focus input on load
+messageInput.focus();
+</script>
+</body>
+</html>
