@@ -29,12 +29,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ============================================
 let db;
 async function initDB() {
-  const dbName = process.env.DB_NAME || 'chat_system';
+  const dbName = process.env.MYSQLDATABASE || process.env.DB_NAME || 'chat_system';
   const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    port: parseInt(process.env.DB_PORT) || 3306,
+    host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
+    user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
+    password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '',
+    port: parseInt(process.env.MYSQLPORT || process.env.DB_PORT) || 3306,
     waitForConnections: true,
     connectionLimit: 10,
     charset: 'utf8mb4'
