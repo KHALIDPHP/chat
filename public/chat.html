@@ -734,6 +734,12 @@
       <input type="text" class="admin-text-input" id="unbanInput" placeholder="اكتب اسم المستخدم هنا..." onkeydown="handleUnbanKey(event)">
       <button class="admin-submit-btn" onclick="adminSubmitUnban()" style="background: #388e3c;">إلغاء الحظر</button>
     </div>
+    <div class="admin-input-group" id="bannedListGroup" style="display: none; border-top: 1px solid #eee; padding-top: 12px; margin-top: 12px;">
+      <span class="admin-input-label" style="margin-bottom: 6px; display: block;">🚫 قائمة المحظورين في هذه الغرفة:</span>
+      <div id="bannedUsersContainer" style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; padding: 4px; width: 100%;">
+        <!-- Filled by JS -->
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1479,11 +1485,16 @@ function adminSubmitAnnouncement() {
 }
 
 function toggleUnbanInput() {
-  const group = document.getElementById('unbanInputGroup');
-  if (group) {
-    group.style.display = group.style.display === 'none' ? 'flex' : 'none';
-    if (group.style.display === 'flex') {
+  const inputGroup = document.getElementById('unbanInputGroup');
+  const listGroup = document.getElementById('bannedListGroup');
+  if (inputGroup && listGroup) {
+    const isShowing = inputGroup.style.display === 'none';
+    inputGroup.style.display = isShowing ? 'flex' : 'none';
+    listGroup.style.display = isShowing ? 'flex' : 'none';
+    if (isShowing) {
       document.getElementById('unbanInput').focus();
+      // Fetch banned list from server
+      socket.emit('get_banned_users');
     }
   }
 }
@@ -1504,6 +1515,37 @@ function adminSubmitUnban() {
   const group = document.getElementById('unbanInputGroup');
   if (group) group.style.display = 'none';
   toggleAdminPanel(false);
+}
+
+socket.on('banned_users_list', ({ banned }) => {
+  const container = document.getElementById('bannedUsersContainer');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  if (!banned || banned.length === 0) {
+    container.innerHTML = '<div style="padding: 12px; text-align: center; color: #999; font-size: 12px;">لا يوجد أعضاء محظورون حالياً</div>';
+    return;
+  }
+  
+  banned.forEach(b => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-bottom: 1px solid #eee; font-size: 13px;';
+    row.innerHTML = `
+      <div style="text-align: right;">
+        <strong style="color: #c62828;">${esc(b.username)}</strong>
+        <span style="font-size: 11px; color: #777; display: block; margin-top: 2px;">بواسطة: ${esc(b.banned_by)}</span>
+      </div>
+      <button onclick="quickUnban('${esc(b.username)}')" style="background: #388e3c; color: #fff; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: bold; cursor: pointer; font-family: 'Tajawal', sans-serif;">فك الحظر</button>
+    `;
+    container.appendChild(row);
+  });
+});
+
+function quickUnban(targetUsername) {
+  if (confirm(`هل أنت متأكد من فك الحظر عن ${targetUsername}؟`)) {
+    socket.emit('unban_user', { targetUsername });
+    toggleAdminPanel(false);
+  }
 }
 
 function toggleMenu(e) {

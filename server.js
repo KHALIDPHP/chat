@@ -660,6 +660,36 @@ io.on('connection', (socket) => {
   });
 
   // -----------------------------------------------
+  // GET BANNED USERS (Admin only)
+  // -----------------------------------------------
+  socket.on('get_banned_users', async () => {
+    const user = onlineUsers.get(socket.id);
+    if (!user) return;
+
+    const isAdmin = await checkIsAdmin(user.username, user.room);
+    if (!isAdmin) return;
+
+    if (db) {
+      try {
+        const [roomRow] = await db.query('SELECT id FROM rooms WHERE name = ?', [user.room]);
+        if (roomRow.length > 0) {
+          const [banned] = await db.query(
+            'SELECT username, reason, banned_by, created_at FROM banned_users WHERE room_id = ? ORDER BY created_at DESC',
+            [roomRow[0].id]
+          );
+          socket.emit('banned_users_list', { banned });
+        } else {
+          socket.emit('banned_users_list', { banned: [] });
+        }
+      } catch (e) {
+        socket.emit('banned_users_list', { banned: [] });
+      }
+    } else {
+      socket.emit('banned_users_list', { banned: [] });
+    }
+  });
+
+  // -----------------------------------------------
   // MAKE ADMIN
   // -----------------------------------------------
   socket.on('make_admin', async ({ targetUsername }) => {
