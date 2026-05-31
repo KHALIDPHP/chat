@@ -310,9 +310,44 @@ app.get('/api/admin/stats', async (req, res) => {
       totalMessages = Object.values(inMemoryMessages).reduce((s, m) => s + m.length, 0);
     }
     res.json({ success: true, stats: { totalOnline, totalRooms, totalMessages, roomStats } });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
   }
+});
+
+app.post('/api/verify-admin', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username) return res.json({ success: false, message: 'يرجى إدخال اسم المستخدم للمسؤول' });
+
+  const cleanUser = username.trim().toLowerCase();
+  
+  // Check if they are database admin
+  let isDbAdmin = false;
+  let dbAdminPassword = null;
+  if (db) {
+    try {
+      const [adminRows] = await db.query('SELECT password FROM admin_users WHERE username = ?', [cleanUser]);
+      if (adminRows.length > 0) {
+        isDbAdmin = true;
+        dbAdminPassword = adminRows[0].password;
+      }
+    } catch (e) {}
+  }
+
+  if (isDbAdmin) {
+    if (password === dbAdminPassword) {
+      return res.json({ success: true });
+    } else {
+      return res.json({ success: false, message: 'كلمة مرور حساب المسؤول غير صحيحة!' });
+    }
+  } else if (cleanUser === 'admin') {
+    if (password === (process.env.ADMIN_PASSWORD || 'admin123')) {
+      return res.json({ success: true });
+    } else {
+      return res.json({ success: false, message: 'كلمة مرور حساب المسؤول غير صحيحة!' });
+    }
+  }
+
+  // Not an admin account, always success
+  return res.json({ success: true });
 });
 
 // Serve pages
