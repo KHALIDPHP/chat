@@ -1433,17 +1433,13 @@ function adminToggleMicLock() {
 }
 
 function adminDropSpeaker() {
-  if (confirm('هل أنت متأكد من سحب المايك من المتحدث الحالي؟')) {
-    socket.emit('drop_speaker');
-    toggleAdminPanel(false);
-  }
+  socket.emit('drop_speaker');
+  toggleAdminPanel(false);
 }
 
 function adminClearChat() {
-  if (confirm('هل أنت متأكد من مسح جميع الرسائل في الغرفة؟')) {
-    socket.emit('clear_chat');
-    toggleAdminPanel(false);
-  }
+  socket.emit('clear_chat');
+  toggleAdminPanel(false);
 }
 
 function toggleAnnouncementInput() {
