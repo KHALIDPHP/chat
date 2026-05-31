@@ -152,6 +152,7 @@ const inMemoryAdmins = {};
 // ============================================
 const onlineUsers = new Map(); // socketId -> { username, room, color, id }
 const roomUsers = new Map();   // roomName -> Set of socketIds
+const voiceRooms = new Map();  // roomName -> Map<socketId, {username, color, muted}>
 
 // ============================================
 // Helper: Get Color from Username
@@ -619,9 +620,90 @@ io.on('connection', (socket) => {
         usersCount: usersInRoom.length
       });
 
+      // Leave voice room if in one
+      if (voiceRooms.has(user.room)) {
+        voiceRooms.get(user.room).delete(socket.id);
+        socket.to(user.room).emit('voice_user_left', { username: user.username });
+      }
+
       console.log(`👋 ${user.username} غادر الغرفة: ${user.room}`);
     }
   });
+
+  // -----------------------------------------------
+  // VOICE ROOM EVENTS
+  // -----------------------------------------------
+
+  socket.on('join_voice', ({ room: voiceRoom, color }) => {
+    const user = onlineUsers.get(socket.id);
+    if (!user) return;
+
+    if (!voiceRooms.has(voiceRoom)) voiceRooms.set(voiceRoom, new Map());
+    voiceRooms.get(voiceRoom).set(socket.id, { username: user.username, color, muted: false });
+
+    // Tell others I joined
+    socket.to(voiceRoom).emit('voice_user_joined', { username: user.username, color });
+
+    // Send me current voice users
+    const currentVoiceUsers = [];
+    for (const [sid, u] of voiceRooms.get(voiceRoom).entries()) {
+      if (sid !== socket.id) currentVoiceUsers.push(u);
+    }
+    socket.emit('voice_room_users', { users: currentVoiceUsers });
+
+    console.log(`🎤 ${user.username} انضم للغرفة الصوتية: ${voiceRoom}`);
+  });
+
+  socket.on('leave_voice', ({ room: voiceRoom }) => {
+    const user = onlineUsers.get(socket.id);
+    if (!user) return;
+    if (voiceRooms.has(voiceRoom)) {
+      voiceRooms.get(voiceRoom).delete(socket.id);
+    }
+    socket.to(voiceRoom).emit('voice_user_left', { username: user.username });
+    console.log(`🔇 ${user.username} غادر الغرفة الصوتية`);
+  });
+
+  // WebRTC Signaling
+  socket.on('voice_offer', ({ to, offer }) => {
+    const targetSocket = findSocketByUsername(to);
+    if (targetSocket) {
+      const user = onlineUsers.get(socket.id);
+      io.to(targetSocket).emit('voice_offer', { from: user?.username, offer });
+    }
+  });
+
+  socket.on('voice_answer', ({ to, answer }) => {
+    const targetSocket = findSocketByUsername(to);
+    if (targetSocket) {
+      const user = onlineUsers.get(socket.id);
+      io.to(targetSocket).emit('voice_answer', { from: user?.username, answer });
+    }
+  });
+
+  socket.on('voice_ice', ({ to, candidate }) => {
+    const targetSocket = findSocketByUsername(to);
+    if (targetSocket) {
+      const user = onlineUsers.get(socket.id);
+      io.to(targetSocket).emit('voice_ice', { from: user?.username, candidate });
+    }
+  });
+
+  socket.on('voice_mute', ({ room: voiceRoom, muted }) => {
+    const user = onlineUsers.get(socket.id);
+    if (!user) return;
+    if (voiceRooms.has(voiceRoom) && voiceRooms.get(voiceRoom).has(socket.id)) {
+      voiceRooms.get(voiceRoom).get(socket.id).muted = muted;
+    }
+    socket.to(voiceRoom).emit('voice_mute_update', { username: user.username, muted });
+  });
+
+  socket.on('voice_speaking', ({ room: voiceRoom, speaking }) => {
+    const user = onlineUsers.get(socket.id);
+    if (!user) return;
+    socket.to(voiceRoom).emit('voice_speaking', { username: user.username, speaking });
+  });
+
 });
 
 // ============================================
@@ -636,6 +718,13 @@ function getRoomUsers(roomName) {
     }
   }
   return users;
+}
+
+function findSocketByUsername(targetUsername) {
+  for (const [sid, u] of onlineUsers.entries()) {
+    if (u.username === targetUsername) return sid;
+  }
+  return null;
 }
 
 async function checkIsAdmin(username, roomName) {
