@@ -995,6 +995,7 @@ let activeSpeakerSeconds = 0, speakerTimerInt = null;
 let isMuted = false, isSpeakerMuted = false;
 let localStream = null, pcs = {}, speakDets = {};
 let voiceMap = new Map(); // username -> {speaking}
+let inVoice = true;
 
 function toggleVoice() {
   handleMicButtonClick();
@@ -1474,6 +1475,19 @@ function handleLogoutOverlayClick(e) {
   if (e.target.id === 'logoutConfirmModal') {
     closeLogoutModal();
   }
+}
+
+function leaveVoice() {
+  inVoice = false;
+  try {
+    socket.emit('leave_mic');
+  } catch(e){}
+  try {
+    stopSpeakerMic();
+  } catch(e){}
+  try {
+    stopListening();
+  } catch(e){}
 }
 
 function confirmLogoutAction() {
