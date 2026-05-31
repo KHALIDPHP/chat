@@ -741,7 +741,16 @@ const myColor  = sessionStorage.getItem('chatColor') || '#e53935';
 
 if (!username || !room) { window.location.href = '/'; }
 
-document.getElementById('hdrRoom').textContent = room;
+function updateHeaderDisplay() {
+  const roomEl = document.getElementById('hdrRoom');
+  if (!roomEl) return;
+  if (activeSpeaker && activeSpeaker.username) {
+    roomEl.textContent = `${room} - المتحدث: ${activeSpeaker.username}`;
+  } else {
+    roomEl.textContent = room;
+  }
+}
+updateHeaderDisplay();
 document.title = room + ' - شات';
 
 /* Name colors palette */
@@ -791,6 +800,7 @@ socket.on('joined_room', d=>{
   sysMsg(`مرحباً ${d.username} في غرفة ${d.room} 👋`);
   if (d.speaker) {
     activeSpeaker = d.speaker;
+    updateHeaderDisplay();
     document.getElementById('vstrip').classList.add('on');
     document.getElementById('vmute').style.display = 'none';
     startClientTimer(d.speaker.timeLeft);
@@ -1049,6 +1059,7 @@ async function startSpeakerMic(){
   toast('🎤 المايك معك الآن! لديك 3 دقائق.');
   
   activeSpeaker = { username: username, color: myColor, timeLeft: 180 };
+  updateHeaderDisplay();
   startClientTimer(180);
   
   startSD(username, localStream, true);
@@ -1063,6 +1074,8 @@ function stopSpeakerMic(){
   if(!isSpeaker) return;
   isSpeaker = false;
   isQueued = false;
+  activeSpeaker = null;
+  updateHeaderDisplay();
   
   Object.values(pcs).forEach(p => p.close());
   pcs = {};
@@ -1101,6 +1114,7 @@ function stopListening(){
   document.getElementById('vstrip').classList.remove('on');
   
   activeSpeaker = null;
+  updateHeaderDisplay();
   renderUsers(chatUsers);
 }
 
@@ -1168,10 +1182,12 @@ socket.on('speaker_changed', d => {
       connectToSpeaker(d.username);
     }
   } else {
+    activeSpeaker = null;
     if (!isSpeaker) {
       stopListening();
     }
   }
+  updateHeaderDisplay();
   renderUsers(chatUsers);
 });
 
