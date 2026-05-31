@@ -177,6 +177,46 @@ const activeSpeakers = new Map(); // roomName -> { socketId, username, color, ex
 const micLockedRooms = new Set();  // Set of roomNames with locked mic queues
 
 // ============================================
+// Helper: Compile Stats Data
+// ============================================
+async function getStatsData() {
+  const totalOnline = onlineUsers.size;
+  const roomStats = [];
+  for (const [name, users] of roomUsers.entries()) {
+    roomStats.push({ room: name, count: users.size });
+  }
+
+  let totalMessages = 0;
+  let totalRooms = Object.keys(inMemoryRooms).length;
+
+  if (db) {
+    try {
+      const [[{ count }]] = await db.query('SELECT COUNT(*) as count FROM messages WHERE is_deleted = 0');
+      totalMessages = count;
+      const [[{ rcount }]] = await db.query('SELECT COUNT(*) as rcount FROM rooms WHERE is_active = 1');
+      totalRooms = rcount;
+    } catch (e) {
+      console.error(e);
+    }
+  } else {
+    totalMessages = Object.values(inMemoryMessages).reduce((s, m) => s + m.length, 0);
+  }
+
+  return { totalOnline, totalRooms, totalMessages, roomStats };
+}
+
+async function broadcastAdminStats() {
+  if (io && io.sockets && io.sockets.adapter.rooms.has('super_admins')) {
+    try {
+      const stats = await getStatsData();
+      io.to('super_admins').emit('admin_stats_update', { stats });
+    } catch (e) {
+      console.error('Error broadcasting admin stats:', e);
+    }
+  }
+}
+
+// ============================================
 // Helper: Get Color from Username
 // ============================================
 const colors = [
@@ -287,29 +327,192 @@ app.get('/api/messages/:room', async (req, res) => {
   }
 });
 
+// Helper: Check if super admin is valid
+async function isValidSuperAdmin(username, password) {
+  if (!password) return false;
+  const cleanUser = (username || 'admin').trim().toLowerCase();
+
+  if (db) {
+    try {
+      const [adminRows] = await db.query('SELECT password FROM admin_users WHERE username = ?', [cleanUser]);
+      if (adminRows.length > 0) {
+        return password === adminRows[0].password;
+      }
+    } catch (e) {
+      console.error('Error validating super admin from DB:', e);
+    }
+  }
+
+  // Fallback
+  if (cleanUser === 'admin') {
+    return password === (process.env.ADMIN_PASSWORD || 'admin123');
+  }
+
+  return false;
+}
+
+// Admin: Login verification
+app.post('/api/admin/login', async (req, res) => {
+  const { username, password } = req.body;
+  const isValid = await isValidSuperAdmin(username, password);
+  if (isValid) {
+    res.json({ success: true, username: username || 'admin' });
+  } else {
+    res.status(401).json({ success: false, message: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
+  }
+});
+
 // Admin: Get stats
 app.get('/api/admin/stats', async (req, res) => {
-  const { password } = req.query;
-  if (password !== (process.env.ADMIN_PASSWORD || 'admin123')) {
+  const { username, password } = req.query;
+  const isValid = await isValidSuperAdmin(username, password);
+  if (!isValid) {
     return res.status(403).json({ success: false, error: 'غير مصرح' });
   }
-  const totalOnline = onlineUsers.size;
-  const roomStats = [];
-  for (const [name, users] of roomUsers.entries()) {
-    roomStats.push({ room: name, count: users.size });
-  }
   try {
-    let totalMessages = 0;
-    let totalRooms = Object.keys(inMemoryRooms).length;
+    const stats = await getStatsData();
+    res.json({ success: true, stats });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin: List all admins
+app.get('/api/admin/list-admins', async (req, res) => {
+  const { username, password } = req.query;
+  const isValid = await isValidSuperAdmin(username, password);
+  if (!isValid) {
+    return res.status(403).json({ success: false, error: 'غير مصرح' });
+  }
+
+  try {
     if (db) {
-      const [[{ count }]] = await db.query('SELECT COUNT(*) as count FROM messages WHERE is_deleted = 0');
-      totalMessages = count;
-      const [[{ rcount }]] = await db.query('SELECT COUNT(*) as rcount FROM rooms WHERE is_active = 1');
-      totalRooms = rcount;
+      const [rows] = await db.query('SELECT id, username, created_at FROM admin_users ORDER BY id ASC');
+      res.json({ success: true, admins: rows });
     } else {
-      totalMessages = Object.values(inMemoryMessages).reduce((s, m) => s + m.length, 0);
+      res.json({ success: true, admins: [{ id: 1, username: 'admin', created_at: new Date() }] });
     }
-    res.json({ success: true, stats: { totalOnline, totalRooms, totalMessages, roomStats } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin: Add new admin
+app.post('/api/admin/add-admin', async (req, res) => {
+  const { adminUsername, adminPassword, newUsername, newPassword } = req.body;
+  const isValid = await isValidSuperAdmin(adminUsername, adminPassword);
+  if (!isValid) {
+    return res.status(403).json({ success: false, error: 'غير مصرح' });
+  }
+
+  if (!newUsername || !newPassword) {
+    return res.status(400).json({ success: false, error: 'اسم المستخدم وكلمة المرور مطلوبان' });
+  }
+
+  const cleanUser = newUsername.trim().toLowerCase();
+  if (cleanUser.length < 3 || cleanUser.length > 50) {
+    return res.status(400).json({ success: false, error: 'اسم المستخدم يجب أن يكون بين 3 و 50 حرفاً' });
+  }
+
+  try {
+    if (db) {
+      const [existing] = await db.query('SELECT id FROM admin_users WHERE username = ?', [cleanUser]);
+      if (existing.length > 0) {
+        return res.status(409).json({ success: false, error: 'اسم المستخدم موجود مسبقاً' });
+      }
+      await db.query('INSERT INTO admin_users (username, password) VALUES (?, ?)', [cleanUser, newPassword]);
+      res.json({ success: true, message: 'تم إضافة المسؤول بنجاح' });
+    } else {
+      res.status(501).json({ success: false, error: 'قاعدة البيانات غير متصلة' });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin: Delete admin
+app.post('/api/admin/delete-admin', async (req, res) => {
+  const { adminUsername, adminPassword, targetId } = req.body;
+  const isValid = await isValidSuperAdmin(adminUsername, adminPassword);
+  if (!isValid) {
+    return res.status(403).json({ success: false, error: 'غير مصرح' });
+  }
+
+  try {
+    if (db) {
+      // Find the username of the target
+      const [rows] = await db.query('SELECT username FROM admin_users WHERE id = ?', [targetId]);
+      if (rows.length === 0) {
+        return res.status(444).json({ success: false, error: 'المسؤول غير موجود' });
+      }
+      const targetUser = rows[0].username.toLowerCase();
+      if (targetUser === (adminUsername || 'admin').trim().toLowerCase()) {
+        return res.status(400).json({ success: false, error: 'لا يمكنك حذف حسابك الشخصي النشط' });
+      }
+
+      await db.query('DELETE FROM admin_users WHERE id = ?', [targetId]);
+      res.json({ success: true, message: 'تم حذف المسؤول بنجاح' });
+    } else {
+      res.status(501).json({ success: false, error: 'قاعدة البيانات غير متصلة' });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin: Delete room
+app.post('/api/admin/delete-room', async (req, res) => {
+  const { adminUsername, adminPassword, roomId } = req.body;
+  const isValid = await isValidSuperAdmin(adminUsername, adminPassword);
+  if (!isValid) {
+    return res.status(403).json({ success: false, error: 'غير مصرح' });
+  }
+
+  try {
+    let roomName = '';
+    if (db) {
+      const [rows] = await db.query('SELECT name FROM rooms WHERE id = ?', [roomId]);
+      if (rows.length === 0) {
+        return res.status(444).json({ success: false, error: 'الغرفة غير موجودة' });
+      }
+      roomName = rows[0].name;
+      // Mark room as inactive in database
+      await db.query('UPDATE rooms SET is_active = 0 WHERE id = ?', [roomId]);
+    } else {
+      // Memory fallback
+      const found = Object.values(inMemoryRooms).find(r => r.id === parseInt(roomId));
+      if (!found) {
+        return res.status(444).json({ success: false, error: 'الغرفة غير موجودة' });
+      }
+      roomName = found.name;
+      delete inMemoryRooms[roomName];
+    }
+
+    // Emit kicked to all users inside the room
+    const socketsInRoom = roomUsers.get(roomName);
+    if (socketsInRoom) {
+      for (const sid of socketsInRoom) {
+        const s = io.sockets.sockets.get(sid);
+        if (s) {
+          s.emit('kicked', { message: 'تم إغلاق هذه الغرفة بواسطة الإدارة العامة.' });
+          s.leave(roomName);
+        }
+      }
+      roomUsers.delete(roomName);
+    }
+
+    // Cleanup room state
+    micQueues.delete(roomName);
+    activeSpeakers.delete(roomName);
+    micLockedRooms.delete(roomName);
+
+    // Broadcast updated stats to other admins
+    broadcastAdminStats();
+
+    // Broadcast room list updated to all clients
+    io.emit('room_list_updated');
+
+    res.json({ success: true, message: 'تم حذف الغرفة وطرد المتواجدين بنجاح' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -363,6 +566,21 @@ app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'adm
 io.on('connection', (socket) => {
   const clientIp = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
   console.log(`🔌 اتصال جديد: ${socket.id} من ${clientIp}`);
+
+  // -----------------------------------------------
+  // SUPER ADMIN AUTH & SOCKET JOIN
+  // -----------------------------------------------
+  socket.on('admin_auth', async ({ username, password }) => {
+    const isValid = await isValidSuperAdmin(username, password);
+    if (isValid) {
+      socket.join('super_admins');
+      const stats = await getStatsData();
+      socket.emit('admin_stats_update', { stats });
+      console.log(`👑 المسؤول الكبير [${username || 'admin'}] اتصل بلوحة الإدارة عبر Socket.io`);
+    } else {
+      socket.emit('admin_auth_failed', { message: 'بيانات غير صحيحة' });
+    }
+  });
 
   // -----------------------------------------------
   // JOIN ROOM
@@ -485,6 +703,7 @@ io.on('connection', (socket) => {
     }
 
     console.log(`👤 ${cleanUser} انضم إلى غرفة: ${cleanRoom}`);
+    broadcastAdminStats();
   });
 
   // -----------------------------------------------
@@ -526,6 +745,7 @@ io.on('connection', (socket) => {
         inMemoryMessages[user.room] = inMemoryMessages[user.room].slice(-200);
       }
     }
+    broadcastAdminStats();
   });
 
   // -----------------------------------------------
@@ -787,6 +1007,7 @@ io.on('connection', (socket) => {
       leaveMic(socket, user.room);
 
       console.log(`👋 ${user.username} غادر الغرفة: ${user.room}`);
+      broadcastAdminStats();
     }
   });
 
