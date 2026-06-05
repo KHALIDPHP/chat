@@ -679,6 +679,18 @@
     .pback-btn:hover {
       background: rgba(255,255,255,0.3);
     }
+    .pclose-btn {
+      color: #999;
+      font-size: 14px;
+      padding: 4px 8px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .pclose-btn:hover {
+      background: #ffebee;
+      color: #c62828;
+    }
   </style>
 </head>
 <body>
@@ -1055,9 +1067,13 @@ function renderPrivateChatsList() {
       <div class="ua" style="background:${clr}">${u[0]}</div>
       <span class="un" style="color:${clr}; flex: 1;">${esc(u)}</span>
       ${badge}
+      <span class="pclose-btn" title="إغلاق المحادثة">✕</span>
     `;
     row.onclick = () => {
       startPrivateChat(u);
+    };
+    row.querySelector('.pclose-btn').onclick = (e) => {
+      closePrivateChat(u, e);
     };
     container.appendChild(row);
   });
@@ -1124,6 +1140,21 @@ function switchToPublicChat() {
   document.getElementById('msgs').style.display = 'block';
   
   scrollDown();
+}
+
+// Close/delete a private conversation
+function closePrivateChat(u, event) {
+  if (event) {
+    event.stopPropagation();
+  }
+  if (confirm(`هل تريد إغلاق وحذف المحادثة مع ${u}؟`)) {
+    delete privateChats[u];
+    if (currentChatMode === 'private' && activePrivateUser === u) {
+      switchToPublicChat();
+    }
+    updatePrivateBadge();
+    renderPrivateChatsList();
+  }
 }
 
 // Render private messages to DOM
