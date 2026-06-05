@@ -113,6 +113,19 @@ async function createTables() {
       password VARCHAR(255) NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+    `CREATE TABLE IF NOT EXISTS private_messages (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      sender VARCHAR(50) NOT NULL,
+      receiver VARCHAR(50) NOT NULL,
+      message TEXT NOT NULL,
+      message_type ENUM('text', 'emoji') DEFAULT 'text',
+      is_read BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_sender (sender),
+      INDEX idx_receiver (receiver),
+      INDEX idx_created (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   ];
 
   for (const query of queries) {
@@ -166,6 +179,7 @@ const inMemoryRooms = {
 };
 const inMemoryMessages = {};
 const inMemoryAdmins = {};
+const inMemoryPrivateMessages = [];
 
 // ============================================
 // Online Users Tracking
@@ -242,6 +256,52 @@ function formatTime(date = new Date()) {
 // ============================================
 // REST API Routes
 // ============================================
+
+// TURN server credentials for WebRTC
+app.get('/api/turn-credentials', (req, res) => {
+  // If the user has set a METERED_API_KEY, use metered.ca for best performance
+  const meteredKey = process.env.METERED_API_KEY;
+  
+  const iceServers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    // Free TURN servers (relay) - essential for mobile networks
+    {
+      urls: 'turn:a.relay.metered.ca:80',
+      username: 'e8dd65b92f6aee65c3912070',
+      credential: '3TFjp+MFtGLKXHR0'
+    },
+    {
+      urls: 'turn:a.relay.metered.ca:80?transport=tcp',
+      username: 'e8dd65b92f6aee65c3912070',
+      credential: '3TFjp+MFtGLKXHR0'
+    },
+    {
+      urls: 'turn:a.relay.metered.ca:443',
+      username: 'e8dd65b92f6aee65c3912070',
+      credential: '3TFjp+MFtGLKXHR0'
+    },
+    {
+      urls: 'turns:a.relay.metered.ca:443?transport=tcp',
+      username: 'e8dd65b92f6aee65c3912070',
+      credential: '3TFjp+MFtGLKXHR0'
+    }
+  ];
+
+  // If user provided custom TURN credentials via environment
+  if (process.env.TURN_URL && process.env.TURN_USERNAME && process.env.TURN_CREDENTIAL) {
+    iceServers.push({
+      urls: process.env.TURN_URL,
+      username: process.env.TURN_USERNAME,
+      credential: process.env.TURN_CREDENTIAL
+    });
+  }
+
+  res.json({ iceServers });
+});
 
 // Get all rooms
 app.get('/api/rooms', async (req, res) => {
@@ -1168,6 +1228,100 @@ io.on('connection', (socket) => {
     const user = onlineUsers.get(socket.id);
     if (!user) return;
     socket.to(voiceRoom).emit('voice_speaking', { username: user.username, speaking });
+  });
+
+  // -----------------------------------------------
+  // PRIVATE CHAT (DM) EVENTS
+  // -----------------------------------------------
+  socket.on('send_private_message', async ({ to, message }) => {
+    const user = onlineUsers.get(socket.id);
+    if (!user || !message || !to) return;
+
+    const cleanMsg = message.trim().substring(0, 1000);
+    if (!cleanMsg) return;
+
+    const targetSocket = findSocketByUsername(to);
+    
+    // Save to DB if connected
+    if (db) {
+      try {
+        await db.query(
+          'INSERT INTO private_messages (sender, receiver, message) VALUES (?, ?, ?)',
+          [user.username, to, cleanMsg]
+        );
+      } catch (e) {
+        console.error('Error saving private message to DB:', e);
+      }
+    } else {
+      // In memory fallback
+      inMemoryPrivateMessages.push({
+        sender: user.username,
+        receiver: to,
+        message: cleanMsg,
+        created_at: new Date()
+      });
+      if (inMemoryPrivateMessages.length > 1000) {
+        inMemoryPrivateMessages.shift();
+      }
+    }
+
+    const msgData = {
+      sender: user.username,
+      receiver: to,
+      message: cleanMsg,
+      time: formatTime(),
+      color: user.color
+    };
+
+    // Emit to receiver if online
+    if (targetSocket) {
+      io.to(targetSocket).emit('new_private_message', msgData);
+    }
+    
+    // Emit confirmation back to sender
+    socket.emit('private_message_sent', msgData);
+  });
+
+  socket.on('get_private_history', async ({ withUser }) => {
+    const user = onlineUsers.get(socket.id);
+    if (!user || !withUser) return;
+
+    try {
+      let messages = [];
+      if (db) {
+        const [rows] = await db.query(
+          `SELECT sender, receiver, message, created_at 
+           FROM private_messages 
+           WHERE (sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?)
+           ORDER BY created_at DESC LIMIT 50`,
+          [user.username, withUser, withUser, user.username]
+        );
+        messages = rows.reverse().map(r => ({
+          sender: r.sender,
+          receiver: r.receiver,
+          message: r.message,
+          time: formatTime(new Date(r.created_at)),
+          color: getUserColor(r.sender)
+        }));
+      } else {
+        const rows = inMemoryPrivateMessages.filter(m => 
+          (m.sender === user.username && m.receiver === withUser) ||
+          (m.sender === withUser && m.receiver === user.username)
+        ).slice(-50);
+        messages = rows.map(r => ({
+          sender: r.sender,
+          receiver: r.receiver,
+          message: r.message,
+          time: formatTime(r.created_at),
+          color: getUserColor(r.sender)
+        }));
+      }
+
+      socket.emit('private_history', { withUser, messages });
+    } catch (e) {
+      console.error('Error fetching private history:', e);
+      socket.emit('private_history', { withUser, messages: [] });
+    }
   });
 
 });
