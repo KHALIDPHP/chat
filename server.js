@@ -739,6 +739,9 @@ io.on('connection', (socket) => {
 
     // Get users in room
     const usersInRoom = getRoomUsers(cleanRoom);
+    const isAdmin = await checkIsAdmin(cleanUser, cleanRoom);
+    const isKh = (cleanUser.replace(/^\[(عضو|مسجل)\]\s*/, '') === 'خالد');
+    const isVipUser = isKh || isAdmin;
 
     // Notify user joined
     socket.to(cleanRoom).emit('user_joined', {
@@ -746,12 +749,12 @@ io.on('connection', (socket) => {
       color: userColor,
       time: formatTime(),
       usersCount: usersInRoom.length,
-      users: usersInRoom
+      users: usersInRoom,
+      isVip: isVipUser
     });
 
     const activeSpk = activeSpeakers.get(cleanRoom);
     const qList = micQueues.get(cleanRoom) || [];
-    const isAdmin = await checkIsAdmin(cleanUser, cleanRoom);
 
     socket.emit('joined_room', {
       room: cleanRoom,
